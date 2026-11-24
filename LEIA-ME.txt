@@ -1,0 +1,81 @@
+AGNUS TOUR · SITE DE PEREGRINAÇÕES
+==================================
+
+O QUE TEM AQUI
+--------------
+1. agnus-tour.html ........ O SITE PRONTO. Arquivo único (CSS, JavaScript, imagens e logos embutidos).
+                            Abra com dois cliques ou publique em qualquer hospedagem.
+2. Codigo.gs .............. Código para colar no Google Apps Script da planilha de leads.
+3. video/ ................. Vídeos dos destinos (sem som). MANTENHA ESTA PASTA AO LADO DO agnus-tour.html
+                            (no computador e na hospedagem), senão os cards ficam sem vídeo.
+4. projeto/ ............... Código-fonte completo (versão com servidor + painel /admin, testes, build).
+                            Para usar a versão com servidor, copie a pasta video/ para projeto/public/video/.
+
+
+COMO FUNCIONA O FORMULÁRIO
+--------------------------
+1. O cliente clica em "Tenho interesse" numa das 4 viagens.
+2. Responde 5 ou 6 perguntas de múltipla escolha (Aparecida com Pe. Idlain tem 5).
+3. Informa nome, cidade/UF e autoriza o uso dos dados (LGPD).
+4. Toca em "Enviar pelo WhatsApp": abre o WhatsApp da Agnus Tour (65 3052-3834) com a mensagem pronta,
+   com a viagem, os dados, as 6 respostas e o PROTOCOLO.
+5. Ao mesmo tempo, uma cópia do lead vai para a planilha Google.
+
+
+COMO LER O PROTOCOLO (só a equipe sabe)
+---------------------------------------
+Exemplo: AG-TS-38857
+
+   AG-TS → viagem: MX México e Cancún · TS Terra Santa e Roma
+                   AI Aparecida Pe. Idlain · AW Aparecida Pe. Welinton
+   38    → dígitos aleatórios (disfarce)
+   85    → pontuação (0 a 99)
+   7     → termômetro:  7 = QUENTE   ·   4 = MORNO   ·   1 = FRIO
+
+Faixas: Quente 75 a 100 pontos · Morno 45 a 74 · Frio 0 a 44.
+Critérios: Disponibilidade (até 25) · Financeiro (até 30) · Prazo de reserva (até 30) ·
+           Documentação, embarque e preparo (até 15).
+
+
+LIGAR O SITE À PLANILHA
+-----------------------
+1. Crie a planilha no Google Sheets → Extensões → Apps Script.
+2. Apague tudo, cole o conteúdo de Codigo.gs e salve.
+3. Escolha a função "configurar" → Executar → autorize (Avançado → Acessar Projeto → Permitir).
+4. TESTE: escolha "testarGravacao" → Executar. Deve aparecer "Lead de Teste" na aba Leads.
+5. Implantar → Nova implantação → engrenagem → "App da Web"
+      Executar como: Eu   ·   Quem pode acessar: Qualquer pessoa   →  Implantar
+6. Copie a URL que termina em /exec.
+7. Abra agnus-tour.html num editor de texto (Bloco de Notas / TextEdit), procure:
+      window.AGNUS_PLANILHA_URL = "";
+   e cole a URL entre as aspas. Salve.
+8. Abra o site, preencha um formulário até o fim e confira a nova linha na aba Leads.
+
+Sem a URL, o site funciona normalmente (o WhatsApp abre com a mensagem), só não grava na planilha.
+
+Se mudar o Codigo.gs depois: Implantar → Gerenciar implantações → lápis → Versão: "Nova versão".
+A URL continua a mesma.
+
+
+DADOS USADOS NO SITE
+--------------------
+Identidade visual, logo, textos, CNPJ, Cadastur, endereço e WhatsApp: site agnustour.com.br.
+Viagens, roteiros, preços e diretores espirituais: PDFs e documentos enviados pela agência.
+Parceria: logo da Canção Nova Cuiabá enviada pela agência.
+
+
+PENDÊNCIAS
+----------
+- Vídeos dos cards: enviados pela agência (baixados do TikTok). Confirmar autorização de uso com os autores
+  ou trocar por vídeos próprios. Para trocar: substitua o arquivo em video/ mantendo o mesmo nome
+  (mexico-cancun.mp4, terra-santa-roma.mp4, aparecida-pe-idlain.mp4, aparecida-pe-welinton.mp4).
+- Fotos: as dos PDFs foram retiradas por baixa resolução. Envie fotos em alta (mín. 1600 px de largura)
+  para voltar a galeria "Onde a sua fé vai caminhar" e as fotos do roteiro dia a dia.
+- Ano e dias exatos da viagem ao México (o material informa só "agosto, 9 dias").
+- Texto do 3º dia da Terra Santa termina cortado no PDF ("…Arcanjo Gabriel, e").
+- Revisão jurídica da Política de Privacidade.
+- Avaliações do Google: o site mostra nota 5,0 e 131 avaliações com link para o Google.
+  O site mostra 4 avaliações reais do Google (arquivo projeto/lib/reviews.json). Duas aparecem com "…"
+  porque estavam cortadas no print; se quiser o texto completo, envie o print com "Mais" aberto.
+  Para exibir os depoimentos automaticamente, é preciso uma chave da API Google Places (versão com servidor).
+- Instagram: o site mostra o cartão "Seguir @agnustouroficial". Feed automático exige token da API oficial.
