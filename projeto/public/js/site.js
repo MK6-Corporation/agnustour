@@ -47,6 +47,53 @@
     return saved.data;
   })();
 
+  /* ---------- Métricas: Pixel da Meta + dataLayer (GTM/GA4) ----------
+     Funil:
+       PageView            → abriu o site (automático)
+       ViewContent         → abriu o roteiro de uma viagem
+       IniciouFormulario   → clicou em "Tenho interesse" (abriu o formulário)
+       EtapaFormulario     → avançou uma etapa (1ª pergunta, 2ª pergunta... até "Seus dados")
+       Lead                → preencheu TUDO e clicou em "Enviar pelo WhatsApp"  ← ÚNICO evento que conta como lead
+       Contact             → clicou no WhatsApp geral (botão flutuante / "Falar com consultor"), não é lead
+     Nenhum dado pessoal (nome, cidade, telefone) é enviado à Meta. */
+  var TRACK = (function () {
+    var pixelReady = false;
+    var pending = [];
+    var STANDARD = { PageView: 1, ViewContent: 1, Lead: 1, Contact: 1 };
+    window.AGNUS_EVENTS = window.AGNUS_EVENTS || []; // histórico na página (útil para conferir no console)
+    function send(name, params, eventId) {
+      var opts = eventId ? { eventID: eventId } : undefined;
+      if (STANDARD[name]) window.fbq('track', name, params || {}, opts);
+      else window.fbq('trackCustom', name, params || {}, opts);
+    }
+    function initPixel(id) {
+      id = String(id || '').replace(/\D/g, '');
+      if (pixelReady || id.length < 10) return;
+      /* Código oficial do Pixel da Meta */
+      !function (f, b, e, v, n, t, s) {
+        if (f.fbq) return; n = f.fbq = function () { n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments); };
+        if (!f._fbq) f._fbq = n; n.push = n; n.loaded = !0; n.version = '2.0'; n.queue = []; t = b.createElement(e); t.async = !0;
+        t.src = v; s = b.getElementsByTagName(e)[0]; s.parentNode.insertBefore(t, s);
+      }(window, document, 'script', 'https://connect.facebook.net/en_US/fbevents.js');
+      window.fbq('init', id);
+      pixelReady = true;
+      pending.splice(0).forEach(function (ev) { send(ev[0], ev[1], ev[2]); });
+    }
+    function track(name, params, eventId) {
+      params = params || {};
+      window.AGNUS_EVENTS.push({ event: name, params: params, eventId: eventId || null, at: new Date().toISOString() });
+      window.dataLayer = window.dataLayer || [];
+      window.dataLayer.push(Object.assign({ event: 'agnus_' + name }, params, eventId ? { event_id: eventId } : {}));
+      if (pixelReady) send(name, params, eventId); else pending.push([name, params, eventId]);
+    }
+    return { init: initPixel, track: track };
+  })();
+  TRACK.track('PageView');
+  if (window.AGNUS_PIXEL_ID) TRACK.init(window.AGNUS_PIXEL_ID);
+  function tripParams(t) {
+    return { content_name: t.name, content_category: t.scope, content_ids: [t.code], content_type: 'product', viagem: t.name, diretor_espiritual: t.leader || '' };
+  }
+
   /* ---------- Menu mobile ---------- */
   var toggle = $('.nav-toggle');
   if (toggle) {
@@ -151,6 +198,7 @@
   function openItinerary(id) {
     var t = TRIPS[id];
     if (!t) return;
+    TRACK.track('ViewContent', tripParams(t));
     var html = '<button class="m-close" type="button" data-close aria-label="Fechar">' + icon('close') + '</button>' +
       '<div class="it-hero">' + mediaHtml(t) + '<div class="it-hero-text"><p>' + esc(t.scope) + ' · ' + esc(t.transport) + '</p><h2 id="it-title">' + esc(t.name) + '</h2><p>' + esc(t.dateLabel) + ' · ' + esc(t.duration) + '</p></div></div>' +
       '<div class="it-body"><div class="it-route">' + icon('route') + '<span>' + esc(t.route) + '</span></div>' +
@@ -189,6 +237,11 @@
     if (!t) return;
     if (itModal.open) closeModal(itModal);
     currentTrip = id;
+    var st0 = getState(id);
+    if (!st0.started) {
+      st0.started = true;
+      TRACK.track('IniciouFormulario', Object.assign(tripParams(t), { total_etapas: t.form.questions.length + 1 }));
+    }
     renderForm();
     openModal(leadModal);
     var first = $('input:checked, input, button.btn', $('[data-form-root]'));
@@ -316,6 +369,15 @@
     st.waUrl = waLink(S.whatsappMessage(t, st.answers, contact, st.protocol));
     st.done = true;
 
+    // LEAD = respondeu todas as perguntas + preencheu os dados + aceitou a LGPD + clicou em "Enviar pelo WhatsApp".
+    // event_id = protocolo: o mesmo número que chega no WhatsApp e na planilha (permite conferir e deduplicar).
+    TRACK.track('Lead', Object.assign(tripParams(t), {
+      protocolo: st.protocol,
+      temperatura: score.classification,
+      pontuacao: score.total,
+      origem: SOURCE.utm_source || '',
+    }), st.protocol);
+
     saveLead({
       tripId: currentTrip, submissionId: st.submissionId, answers: st.answers,
       name: contact.name, city: contact.city, state: contact.state,
@@ -328,7 +390,6 @@
     try { w = window.open(st.waUrl, '_blank'); } catch (e) { w = null; }
     if (w) { try { w.opener = null; } catch (e) {} }
     renderForm();
-    if (window.dataLayer) window.dataLayer.push({ event: 'lead_whatsapp', trip: t.name });
     // Navegadores que bloqueiam nova aba (ex.: navegador interno do Instagram): abre na mesma aba
     if (!w) setTimeout(function () { location.href = st.waUrl; }, 700);
   }
@@ -414,7 +475,23 @@
     }
     if (e.target.closest('[data-close]')) closeModal(leadModal);
   });
+  function trackStep() {
+    var st = getState(currentTrip);
+    var t = TRIPS[currentTrip];
+    st.maxStep = st.maxStep || 0;
+    if (st.done || st.step <= st.maxStep) return;
+    st.maxStep = st.step;
+    var qs = t.form.questions;
+    var isContact = st.step >= qs.length;
+    TRACK.track('EtapaFormulario', Object.assign(tripParams(t), {
+      etapa: st.step + 1,
+      total_etapas: qs.length + 1,
+      etapa_nome: isContact ? 'Seus dados' : qs[st.step].short,
+      perguntas_respondidas: st.step,
+    }));
+  }
   function focusStep() {
+    trackStep();
     var el = $('input:checked', formRoot) || $('input[type=radio]', formRoot) || $('#lf-name', formRoot);
     if (el) el.focus({ preventScroll: true });
   }
@@ -424,6 +501,8 @@
 
   // Botões dos cards (e do roteiro)
   document.addEventListener('click', function (e) {
+    var waGeneral = e.target.closest('[data-wa]');
+    if (waGeneral) TRACK.track('Contact', { local: waGeneral.classList.contains('wa-float') ? 'botao_flutuante' : 'menu' });
     var f = e.target.closest('[data-open-form]');
     if (f) { e.preventDefault(); whenReady(function () { openForm(f.getAttribute('data-open-form')); }); return; }
     var it = e.target.closest('[data-open-itinerary]');
@@ -446,6 +525,7 @@
   function whenReady(fn) { if (CONFIG) fn(); else ready.push(fn); }
   function applyConfig(cfg) {
     CONFIG = cfg;
+    if (cfg.pixelId) TRACK.init(cfg.pixelId);
     cfg.trips.forEach(function (t) { TRIPS[t.id] = t; });
     $$('[data-wa]').forEach(function (a) { a.href = waLink('Olá, gostaria de falar com um consultor sobre as peregrinações.'); });
     ready.splice(0).forEach(function (fn) { fn(); });

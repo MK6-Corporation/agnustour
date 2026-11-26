@@ -5,11 +5,14 @@
  * Em paralelo, o site envia uma cópia para esta planilha com as respostas,
  * a pontuação, o termômetro (Quente/Morno/Frio) e o protocolo que foi na mensagem.
  *
- * INSTALAÇÃO (5 minutos)
- *  1. Abra a planilha → Extensões → Apps Script. Apague tudo, cole este arquivo e salve.
- *  2. Escolha a função "configurar" → Executar (autorize quando o Google pedir).
- *  3. Implantar → Nova implantação → tipo "App da Web"
- *       • Executar como: Eu      • Quem pode acessar: Qualquer pessoa
+ * INSTALAÇÃO (5 minutos) — planilha "LEADS AGNUS TOUR"
+ *  1. Abra a planilha → Extensões → Apps Script. Apague tudo, cole este arquivo e salve (Ctrl+S).
+ *  2. Escolha a função "configurar" → Executar. Autorize quando o Google pedir
+ *     (Revisar permissões → sua conta → Avançado → Acessar projeto → Permitir).
+ *     Ela cria os campos: aba Leads (a antiga "Página1"), uma aba por viagem e a aba Legenda.
+ *  3. TESTE: escolha "testarGravacao" → Executar. Deve aparecer "Lead de Teste" na aba Leads.
+ *  4. Implantar → Nova implantação → engrenagem → "App da Web"
+ *       • Executar como: Eu      • Quem pode acessar: Qualquer pessoa   → Implantar
  *     Copie a URL que termina em /exec e cole no agnus-tour.html (AGNUS_PLANILHA_URL).
  *
  * Ao alterar ESTE CÓDIGO depois: Implantar → Gerenciar implantações → editar (lápis) →
@@ -23,6 +26,7 @@
  */
 
 // ===================== CONFIGURAÇÃO =====================
+var PLANILHA_ID = '1n6B4d9xEVLuwkNHE3VmCe6DuQ-t1q3IpmciUBbKMUGM'; // LEADS AGNUS TOUR
 var TOKEN = '';                   // Só para a versão com servidor (painel /admin). Deixe vazio na versão HTML.
 var ABAS_POR_VIAGEM = true;       // também copia cada lead para uma aba com o nome da viagem
 var FUSO = 'America/Cuiaba';
@@ -32,7 +36,7 @@ var EMAIL_ALERTA_QUENTE = '';     // ex.: 'comercial@agnustour.com.br' (vazio = 
 var ABA_LEADS = 'Leads';
 var ABA_LEGENDA = 'Legenda';
 var COLUNAS = [
-  'Data/hora', 'Viagem', 'Protocolo', 'Nome', 'Cidade', 'UF', 'WhatsApp',
+  'Data/hora', 'Viagem', 'Protocolo', 'Nome', 'Cidade', 'UF', 'WhatsApp (preencher no atendimento)',
   'Pontuação', 'Termômetro',
   'Disponibilidade (pts)', 'Financeiro (pts)', 'Prazo (pts)', 'Preparo (pts)',
   'Viajantes', 'Orçamento / investimento', 'Prazo de compra',
@@ -55,8 +59,7 @@ function doPost(e) {
     var dados = lerCorpo_(e);
     if (dados.website) return json_({ ok: true }); // honeypot anti-robô
 
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
-    if (!ss) throw new Error('Script não está ligado a uma planilha. Abra pela planilha: Extensões → Apps Script.');
+    var ss = planilha_();
     garantirAbas_(ss);
 
     var lead;
@@ -90,11 +93,24 @@ function doGet() {
   return json_({ ok: true, servico: 'Agnus Tour · recebimento de leads', hora: new Date().toISOString() });
 }
 
-/** Rode uma vez: cria as abas Leads e Legenda. */
+function planilha_() {
+  var ss = PLANILHA_ID ? SpreadsheetApp.openById(PLANILHA_ID) : SpreadsheetApp.getActiveSpreadsheet();
+  if (!ss) throw new Error('Planilha não encontrada. Confira o PLANILHA_ID ou abra pela planilha: Extensões → Apps Script.');
+  return ss;
+}
+
+var VIAGENS = ['México e Cancún', 'Terra Santa e Roma', 'Aparecida e Canção Nova com Pe. Idlain', 'Aparecida e Canção Nova com Pe. Welinton'];
+
+/** Rode uma vez: configura os campos (aba Leads, uma aba por viagem e Legenda). */
 function configurar() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  if (!ss) throw new Error('Abra este script pela planilha: Extensões → Apps Script.');
+  var ss = planilha_();
+  // Aproveita a aba vazia padrão ("Página1"/"Sheet1") como a aba Leads
+  if (!ss.getSheetByName(ABA_LEADS)) {
+    var vazia = ss.getSheets().filter(function (a) { return /^(Página|Pagina|Sheet|Planilha)\s*1$/i.test(a.getName()) && a.getLastRow() === 0; })[0];
+    if (vazia) vazia.setName(ABA_LEADS);
+  }
   garantirAbas_(ss);
+  if (ABAS_POR_VIAGEM) VIAGENS.forEach(function (v) { obterAbaLeads_(ss, nomeAba_(v)); });
   console.log('Planilha pronta: ' + ss.getUrl());
 }
 
@@ -206,6 +222,9 @@ function obterAbaLeads_(ss, nome) {
     aba.getRange(1, 1, 1, COLUNAS.length).setFontWeight('bold').setBackground('#009BDC').setFontColor('#FFFFFF');
     aba.setFrozenRows(1);
     aba.setFrozenColumns(4);
+    var larguras = { 'Data/hora': 140, 'Viagem': 250, 'Protocolo': 110, 'Nome': 200, 'Cidade': 130, 'UF': 45,
+      'WhatsApp (preencher no atendimento)': 170, 'Pontuação': 85, 'Termômetro': 190, 'Status do atendimento': 160 };
+    Object.keys(larguras).forEach(function (c) { aba.setColumnWidth(COLUNAS.indexOf(c) + 1, larguras[c]); });
     var status = SpreadsheetApp.newDataValidation()
       .requireValueInList(['Novo', 'Em atendimento', 'Proposta enviada', 'Reservou', 'Sem interesse'], true).build();
     aba.getRange(2, COLUNAS.indexOf('Status do atendimento') + 1, aba.getMaxRows() - 1, 1).setDataValidation(status);

@@ -29,13 +29,13 @@ const MIME = {
 
 const CSP = [
   "default-src 'self'",
-  "script-src 'self' https://www.instagram.com",
+  "script-src 'self' https://www.instagram.com https://connect.facebook.net",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src 'self' https://fonts.gstatic.com",
-  "img-src 'self' data: https://*.googleusercontent.com https://*.cdninstagram.com https://*.fbcdn.net https://www.instagram.com",
+  "img-src 'self' data: https://*.googleusercontent.com https://*.cdninstagram.com https://*.fbcdn.net https://www.instagram.com https://www.facebook.com",
   "media-src 'self'",
   "frame-src https://www.instagram.com",
-  "connect-src 'self'",
+  "connect-src 'self' https://www.facebook.com https://connect.facebook.net",
   "form-action 'self'",
   "base-uri 'self'",
   "frame-ancestors 'none'",
@@ -183,6 +183,7 @@ async function handle(req, res) {
     const s = settings.load();
     return send(res, 200, {
       whatsappNumber: s.whatsappNumber,
+      pixelId: s.pixelId,
       trips: publicTrips(true),
       scoring: { points: s.points, categoryMax: s.categoryMax, thresholds: s.thresholds, referencePrices: s.referencePrices, budgetTiers: s.budgetTiers },
     });

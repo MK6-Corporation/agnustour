@@ -34,7 +34,7 @@ if (partnerLogoPath()) usedImages.add(partnerLogoPath());
 for (const rel of usedImages) images[rel] = dataUri(rel);
 
 const STATIC = {
-  sheetsUrl: process.env.SHEETS_URL || '',
+  sheetsUrl: process.env.SHEETS_URL || 'https://script.google.com/macros/s/AKfycbzZum1QZIUjRgns1ZKZgPoQLFVSOTlTRJVICJZ_5N-_xcIRMn5hVqv3j743E-N6aXRo/exec',
   config: {
     whatsappNumber: settings.whatsappNumber,
     trips: publicTrips(true),
@@ -73,7 +73,12 @@ html = html
        Sem a URL, o formulário funciona em modo demonstração (não grava).
        ====================================================================== */
     window.AGNUS_PLANILHA_URL = ${JSON.stringify(STATIC.sheetsUrl)};
+
+    /* ID DO PIXEL DA META (Gerenciador de Eventos). Deixe "" para desligar o Pixel. */
+    window.AGNUS_PIXEL_ID = ${JSON.stringify(settings.pixelId || '')};
   </script>`)
+  .replace('<body>', `<body>
+<noscript><img height="1" width="1" style="display:none" alt="" src="https://www.facebook.com/tr?id=${settings.pixelId}&ev=PageView&noscript=1"></noscript>`)
   .replace('<link rel="stylesheet" href="/css/site.css">', `<style>\n${css}\n</style>`)
   .replace(/\s*<meta property="og:image"[^>]*>/, '')
   .replace('<link rel="icon" href="/img/logo.png">', `<link rel="icon" href="${images['img/logo.png']}">`)

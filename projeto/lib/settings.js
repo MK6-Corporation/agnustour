@@ -26,6 +26,7 @@ function defaults() {
   return {
     // Número oficial do botão de WhatsApp do site agnustour.com.br
     whatsappNumber: '556530523834',
+    pixelId: process.env.META_PIXEL_ID || '1139506635353572',
     thresholds: { hot: 75, warm: 45 },
     categoryMax,
     // Valor de referência por pessoa (R$) das viagens internacionais — padrão = preço oficial.

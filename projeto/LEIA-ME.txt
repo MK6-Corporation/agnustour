@@ -37,24 +37,65 @@ Critérios: Disponibilidade (até 25) · Financeiro (até 30) · Prazo de reserv
            Documentação, embarque e preparo (até 15).
 
 
-LIGAR O SITE À PLANILHA
------------------------
-1. Crie a planilha no Google Sheets → Extensões → Apps Script.
-2. Apague tudo, cole o conteúdo de Codigo.gs e salve.
-3. Escolha a função "configurar" → Executar → autorize (Avançado → Acessar Projeto → Permitir).
+LIGAR O SITE À PLANILHA "LEADS AGNUS TOUR"
+------------------------------------------
+JÁ LIGADO: o agnus-tour.html deste zip já envia para o App da Web publicado (…N6aXRo/exec).
+O Codigo.gs já vem apontado para a planilha LEADS AGNUS TOUR
+(docs.google.com/spreadsheets/d/1n6B4d9xEVLuwkNHE3VmCe6DuQ-t1q3IpmciUBbKMUGM).
+
+1. Abra a planilha → Extensões → Apps Script.
+2. Apague tudo, cole o conteúdo de Codigo.gs e salve (Ctrl+S).
+3. Escolha a função "configurar" → Executar → autorize (Avançado → Acessar projeto → Permitir).
+   Ela configura os campos: a "Página1" vira a aba Leads, cria uma aba por viagem e a aba Legenda.
 4. TESTE: escolha "testarGravacao" → Executar. Deve aparecer "Lead de Teste" na aba Leads.
 5. Implantar → Nova implantação → engrenagem → "App da Web"
       Executar como: Eu   ·   Quem pode acessar: Qualquer pessoa   →  Implantar
-6. Copie a URL que termina em /exec.
+6. Copie a URL que termina em /exec (e mande para mim, ou siga o passo 7).
 7. Abra agnus-tour.html num editor de texto (Bloco de Notas / TextEdit), procure:
       window.AGNUS_PLANILHA_URL = "";
    e cole a URL entre as aspas. Salve.
 8. Abra o site, preencha um formulário até o fim e confira a nova linha na aba Leads.
 
+CAMPOS DA ABA LEADS (e das abas de cada viagem)
+  Data/hora · Viagem · Protocolo · Nome · Cidade · UF · WhatsApp (preencher no atendimento)
+  Pontuação · Termômetro (colorido: vermelho quente, amarelo morno, azul frio)
+  Pontos por critério (Disponibilidade, Financeiro, Prazo, Preparo)
+  Viajantes · Orçamento/investimento · Prazo de compra · Perguntas e respostas 1 a 6
+  utm_source/medium/campaign/term/content · gclid · fbclid · Página de entrada · Referência
+  Consentimento LGPD · Status do atendimento (lista: Novo, Em atendimento, Proposta enviada,
+  Reservou, Sem interesse) · ID do lead
+Uma linha na aba Leads = um evento Lead no Pixel da Meta (mesmo protocolo).
+
 Sem a URL, o site funciona normalmente (o WhatsApp abre com a mensagem), só não grava na planilha.
 
 Se mudar o Codigo.gs depois: Implantar → Gerenciar implantações → lápis → Versão: "Nova versão".
 A URL continua a mesma.
+
+
+MÉTRICAS · PIXEL DA META (ID 1139506635353572)
+----------------------------------------------
+O Pixel já está instalado. Eventos que chegam no Gerenciador de Eventos da Meta:
+
+  PageView ............ abriu o site
+  ViewContent ......... abriu o roteiro de uma viagem
+  IniciouFormulario ... clicou em "Tenho interesse" (1x por viagem por visita)
+  EtapaFormulario ..... avançou no formulário (parâmetro etapa_nome mostra até onde chegou)
+  Lead ................ RESPONDEU TUDO + preencheu nome/cidade/UF + aceitou a LGPD
+                        + clicou em "Enviar pelo WhatsApp"  ← ÚNICO evento que conta como lead
+  Contact ............. clicou no WhatsApp geral (botão flutuante/menu). NÃO é lead.
+
+- O Lead dispara 1 vez por envio, com event_id = PROTOCOLO (o mesmo que chega no WhatsApp e na
+  planilha). Assim dá para bater: leads na Meta = linhas na planilha = mensagens com protocolo.
+- Parâmetros enviados: viagem, categoria (Internacional/Nacional), código (MX/TS/AI/AW), diretor
+  espiritual, temperatura (quente/morno/frio), pontuação e origem (utm_source).
+  Nome, cidade e telefone NÃO são enviados à Meta.
+- Dica: no Gerenciador de Eventos, crie uma Conversão Personalizada "Lead quente" com
+  evento Lead + regra temperatura = quente, para otimizar campanhas pelos melhores leads.
+- Funil sugerido: IniciouFormulario → EtapaFormulario (etapa_nome = Seus dados) → Lead.
+- Os mesmos eventos vão para o dataLayer (agnus_Lead, agnus_IniciouFormulario...) para GTM/GA4.
+- Trocar ou desligar o Pixel: abra agnus-tour.html num editor e altere
+     window.AGNUS_PIXEL_ID = "1139506635353572";   ("" desliga)
+- Testar: Gerenciador de Eventos → Testar eventos → abra o site pelo link indicado e faça um envio.
 
 
 DADOS USADOS NO SITE
